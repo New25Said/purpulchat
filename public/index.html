@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Purpul Chat</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="auth">
+
+<h1>🍇 Purpul Chat</h1>
+
+<input id="nickname" placeholder="Nickname">
+
+<input id="user" placeholder="@usuario">
+
+<input type="file" id="photo">
+
+<button onclick="register()">
+Crear Cuenta
+</button>
+
+<hr>
+
+<input id="loginUser" placeholder="@usuario">
+
+<button onclick="login()">
+Entrar
+</button>
+
+</div>
+
+<div id="chat" style="display:none">
+
+<div id="messages"></div>
+
+<div id="bottom">
+
+<input id="messageInput">
+
+<button onclick="sendMessage()">
+Enviar
+</button>
+
+</div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
