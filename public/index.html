@@ -1,49 +1,89 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Purpul Chat</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div id="auth">
+<div id="authScreen">
 
-<h1>🍇 Purpul Chat</h1>
+    <div class="card">
+        <h1>🍇 Purpul Chat</h1>
 
-<input id="nickname" placeholder="Nickname">
+        <div class="tabs">
+            <button onclick="showRegister()">Registro</button>
+            <button onclick="showLogin()">Login</button>
+        </div>
 
-<input id="user" placeholder="@usuario">
+        <div id="registerBox">
 
-<input type="file" id="photo">
+            <input id="regNickname" placeholder="Nickname">
 
-<button onclick="register()">
-Crear Cuenta
-</button>
+            <input id="regUser" placeholder="@usuario">
 
-<hr>
+            <input id="regPassword" type="password" placeholder="Contraseña">
 
-<input id="loginUser" placeholder="@usuario">
+            <input id="regPhoto" type="file" accept="image/*">
 
-<button onclick="login()">
-Entrar
-</button>
+            <button onclick="register()">
+                Crear cuenta
+            </button>
+
+        </div>
+
+        <div id="loginBox" style="display:none;">
+
+            <input id="loginUser" placeholder="@usuario">
+
+            <input id="loginPassword" type="password" placeholder="Contraseña">
+
+            <button onclick="login()">
+                Entrar
+            </button>
+
+        </div>
+
+    </div>
 
 </div>
 
-<div id="chat" style="display:none">
+<div id="chatScreen" style="display:none;">
 
-<div id="messages"></div>
+    <div id="topBar">
 
-<div id="bottom">
+        <div id="profileInfo">
 
-<input id="messageInput">
+            <img id="profilePhoto">
 
-<button onclick="sendMessage()">
-Enviar
-</button>
+            <div>
 
-</div>
+                <div id="profileNickname"></div>
+
+                <div id="profileUser"></div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div id="messages"></div>
+
+    <div id="bottomBar">
+
+        <input
+            id="messageInput"
+            placeholder="Escribe un mensaje..."
+        >
+
+        <button onclick="sendMessage()">
+            Enviar
+        </button>
+
+    </div>
 
 </div>
 
