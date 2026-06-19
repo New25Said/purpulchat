@@ -1,99 +1,237 @@
 const socket = io();
 
-let myProfile = null;
+let currentUser = null;
 
-function register(){
+function showRegister() {
+    document.getElementById("registerBox").style.display = "block";
+    document.getElementById("loginBox").style.display = "none";
+}
+
+function showLogin() {
+    document.getElementById("registerBox").style.display = "none";
+    document.getElementById("loginBox").style.display = "block";
+}
+
+function register() {
 
     const nickname =
-        document.getElementById("nickname").value;
+        document.getElementById("regNickname").value.trim();
 
     const user =
-        document.getElementById("user").value;
+        document.getElementById("regUser").value.trim();
+
+    const password =
+        document.getElementById("regPassword").value;
 
     const file =
-        document.getElementById("photo").files[0];
+        document.getElementById("regPhoto").files[0];
 
-    const reader = new FileReader();
+    if (!nickname || !user || !password) {
+        alert("Completa todos los campos");
+        return;
+    }
 
-    reader.onload = () => {
+    const finishRegister = (photo) => {
 
         socket.emit(
             "register",
             {
                 nickname,
                 user,
-                photo: reader.result
+                password,
+                photo
             },
             (response) => {
 
-                alert(response.message || "Cuenta creada");
+                alert(response.message);
+
+                if (response.success) {
+                    showLogin();
+                }
 
             }
         );
 
     };
 
-    if(file){
-        reader.readAsDataURL(file);
+    if (!file) {
+        finishRegister("");
+        return;
     }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+        finishRegister(reader.result);
+    };
+
+    reader.readAsDataURL(file);
+
 }
 
-function login(){
+function login() {
 
     const user =
-        document.getElementById("loginUser").value;
+        document.getElementById("loginUser").value.trim();
 
-    socket.emit("login", user, response => {
+    const password =
+        document.getElementById("loginPassword").value;
 
-        if(!response.success){
-            alert("No existe");
-            return;
+    socket.emit(
+        "login",
+        {
+            user,
+            password
+        },
+        (response) => {
+
+            if (!response.success) {
+                alert(response.message);
+                return;
+            }
+
+            currentUser = response.profile;
+
+            document.getElementById(
+                "authScreen"
+            ).style.display = "none";
+
+            document.getElementById(
+                "chatScreen"
+            ).style.display = "flex";
+
+            document.getElementById(
+                "profileNickname"
+            ).textContent =
+                currentUser.nickname;
+
+            document.getElementById(
+                "profileUser"
+            ).textContent =
+                currentUser.user;
+
+            if (currentUser.photo) {
+
+                document.getElementById(
+                    "profilePhoto"
+                ).src =
+                    currentUser.photo;
+
+            }
+
         }
-
-        myProfile = response.profile;
-
-        document.getElementById("auth").style.display = "none";
-        document.getElementById("chat").style.display = "block";
-
-    });
+    );
 
 }
 
-function sendMessage(){
+function sendMessage() {
+
+    const input =
+        document.getElementById(
+            "messageInput"
+        );
 
     const text =
-        document.getElementById("messageInput").value;
+        input.value.trim();
 
-    socket.emit("message", text);
+    if (!text) return;
 
-    document.getElementById("messageInput").value = "";
+    socket.emit(
+        "sendMessage",
+        text
+    );
+
+    input.value = "";
+
 }
 
-socket.on("chatHistory", msgs => {
+function addMessage(msg) {
 
-    msgs.forEach(addMessage);
+    const messages =
+        document.getElementById(
+            "messages"
+        );
 
-});
-
-socket.on("message", addMessage);
-
-function addMessage(msg){
-
-    const div = document.createElement("div");
+    const div =
+        document.createElement("div");
 
     div.className = "message";
 
     div.innerHTML = `
-        <img class="avatar" src="${msg.photo}">
-        <div>
-            <b>${msg.nickname}</b>
-            (${msg.user})
-            <br>
-            ${msg.text}
+        <img
+            class="messagePhoto"
+            src="${msg.photo || ''}"
+        >
+
+        <div class="messageContent">
+
+            <div class="messageHeader">
+
+                <span class="messageNickname">
+                    ${escapeHtml(msg.nickname)}
+                </span>
+
+                <span class="messageUser">
+                    ${escapeHtml(msg.user)}
+                </span>
+
+            </div>
+
+            <div class="messageText">
+                ${escapeHtml(msg.text)}
+            </div>
+
         </div>
     `;
 
-    document
-        .getElementById("messages")
-        .appendChild(div);
+    messages.appendChild(div);
+
+    messages.scrollTop =
+        messages.scrollHeight;
+
+}
+
+socket.on(
+    "chatHistory",
+    (messages) => {
+
+        document.getElementById(
+            "messages"
+        ).innerHTML = "";
+
+        messages.forEach(addMessage);
+
+    }
+);
+
+socket.on(
+    "message",
+    addMessage
+);
+
+document.addEventListener(
+    "keydown",
+    (e) => {
+
+        if (
+            e.key === "Enter" &&
+            document.getElementById(
+                "chatScreen"
+            ).style.display === "flex"
+        ) {
+            sendMessage();
+        }
+
+    }
+);
+
+function escapeHtml(text) {
+
+    const div =
+        document.createElement("div");
+
+    div.textContent = text;
+
+    return div.innerHTML;
+
 }
