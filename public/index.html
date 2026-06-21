@@ -3,43 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <title>Purpul Chat</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<div class="center">
+
 <h1>🍇 Purpul Chat</h1>
 
-<button id="btn">
-Crear documento de prueba
-</button>
+<input id="user" placeholder="@user (único)">
+<input id="nickname" placeholder="nickname">
 
-<pre id="result"></pre>
+<input type="file" id="photo">
 
-<script>
+<button onclick="createAccount()">Crear cuenta</button>
 
-document
-.getElementById("btn")
-.onclick = async () => {
+<p id="status"></p>
 
-    const r =
-        await fetch("/test", {
-            method: "POST"
-        });
+</div>
 
-    const data =
-        await r.json();
-
-    document
-    .getElementById("result")
-    .textContent =
-        JSON.stringify(
-            data,
-            null,
-            2
-        );
-
-};
-
-</script>
+<script src="auth.js"></script>
 
 </body>
 </html>
