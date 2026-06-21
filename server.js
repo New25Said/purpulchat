@@ -20,65 +20,97 @@ function saveDB(db) {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 }
 
-/* ================= USERS ================= */
+/* USERS */
 app.post("/user", (req, res) => {
     const db = loadDB();
-
     const { id } = req.body;
 
+    if (!id) return res.json({ ok: false });
+
     if (!db.users[id]) {
-        db.users[id] = {
-            createdAt: Date.now()
-        };
+        db.users[id] = { createdAt: Date.now() };
         saveDB(db);
     }
 
     res.json({ ok: true });
 });
 
-/* ================= WEBSOCKET ================= */
+/* WS */
+const online = new Map(); // user -> ws
+
+function sendUsers() {
+    const list = [...online.keys()];
+
+    const payload = JSON.stringify({
+        type: "users",
+        users: list
+    });
+
+    online.forEach(ws => ws.send(payload));
+}
+
 wss.on("connection", (ws) => {
 
-    ws.on("message", (data) => {
-        const msg = JSON.parse(data);
+    let currentUser = null;
 
-        if (msg.type === "msg") {
-            const db = loadDB();
+    ws.on("message", (raw) => {
+        const msg = JSON.parse(raw);
 
-            const message = {
+        /* LOGIN WS */
+        if (msg.type === "join") {
+            currentUser = msg.user;
+            online.set(currentUser, ws);
+            sendUsers();
+            return;
+        }
+
+        /* GLOBAL */
+        if (msg.type === "global") {
+            const data = {
+                type: "global",
                 user: msg.user,
                 text: msg.text,
                 t: Date.now()
             };
 
-            db.messages.push(message);
-
-            if (db.messages.length > 200) {
-                db.messages = db.messages.slice(-200);
-            }
-
-            saveDB(db);
-
-            // broadcast a todos
-            wss.clients.forEach(client => {
-                if (client.readyState === 1) {
-                    client.send(JSON.stringify({
-                        type: "msg",
-                        data: message
-                    }));
+            online.forEach(c => {
+                if (c.readyState === 1) {
+                    c.send(JSON.stringify(data));
                 }
             });
         }
+
+        /* PRIVATE */
+        if (msg.type === "private") {
+            const target = online.get(msg.to);
+
+            const payload = {
+                type: "private",
+                from: msg.user,
+                to: msg.to,
+                text: msg.text,
+                t: Date.now()
+            };
+
+            if (target) target.send(JSON.stringify(payload));
+            ws.send(JSON.stringify(payload));
+        }
     });
 
+    ws.on("close", () => {
+        if (currentUser) {
+            online.delete(currentUser);
+            sendUsers();
+        }
+    });
 });
 
-/* ================= LOAD MESSAGES ================= */
+/* HISTORY GLOBAL (opcional simple) */
 app.get("/msgs", (req, res) => {
     const db = loadDB();
     res.json(db.messages);
 });
 
 server.listen(process.env.PORT || 3000, () => {
-    console.log("🍇 Purpul Chat PRO WS RUNNING");
+    console.log("🍇 Purpul Chat FIXED RUNNING");
 });
