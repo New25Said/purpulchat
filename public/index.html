@@ -8,10 +8,11 @@
 body {
     margin: 0;
     font-family: system-ui;
-    background: #0e0014;
+    background: #0b0012;
     color: white;
 }
 
+/* LOGIN */
 #login {
     position: fixed;
     inset: 0;
@@ -22,8 +23,8 @@ body {
 }
 
 input {
-    margin: 5px;
     padding: 10px;
+    margin: 5px;
     border-radius: 10px;
     border: none;
 }
@@ -32,10 +33,11 @@ button {
     padding: 10px;
     border-radius: 10px;
     background: #7a2cff;
-    color: white;
     border: none;
+    color: white;
 }
 
+/* CHAT */
 #chat {
     display: none;
     height: 100vh;
@@ -46,24 +48,27 @@ button {
     flex: 1;
     overflow-y: auto;
     padding: 10px;
+    display: flex;
+    flex-direction: column;
 }
 
 .msg {
-    background: #2a0033;
-    margin: 6px;
+    max-width: 70%;
     padding: 10px;
-    border-radius: 10px;
+    margin: 5px;
+    border-radius: 15px;
+    background: #2a0033;
 }
 
 .me {
     background: #7a2cff;
-    margin-left: auto;
-    max-width: 70%;
+    align-self: flex-end;
 }
 
 .bar {
     display: flex;
     padding: 10px;
+    background: #120018;
 }
 
 .bar input {
@@ -74,78 +79,88 @@ button {
 </head>
 <body>
 
+<!-- LOGIN -->
 <div id="login">
-    <h2>🍇 Purpul Chat</h2>
+    <h2>🍇 Purpul Chat PRO</h2>
     <input id="user" placeholder="@user">
-    <button onclick="enter()">Entrar</button>
+    <button onclick="start()">Entrar</button>
 </div>
 
+<!-- CHAT -->
 <div id="chat">
+
     <div id="msgs"></div>
 
     <div class="bar">
-        <input id="text">
+        <input id="text" placeholder="mensaje...">
         <button onclick="send()">➤</button>
     </div>
+
 </div>
 
 <script>
 let user = localStorage.getItem("u");
+let ws;
 
-if (user) start();
+/* INIT */
+if (user) init();
 
-function enter() {
+function start() {
     user = document.getElementById("user").value;
     localStorage.setItem("u", user);
-
     fetch("/user", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ id: user })
     });
 
-    start();
+    init();
 }
 
-function start() {
+function init() {
     document.getElementById("login").style.display = "none";
     document.getElementById("chat").style.display = "flex";
 
-    load();
-    setInterval(load, 1200);
+    ws = new WebSocket(location.origin.replace("http", "ws"));
+
+    ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+
+        if (msg.type === "msg") {
+            render(msg.data);
+        }
+    };
+
+    loadHistory();
 }
 
-let last = 0;
-
-async function load() {
+async function loadHistory() {
     const res = await fetch("/msgs");
     const msgs = await res.json();
 
+    msgs.forEach(render);
+}
+
+function render(m) {
     const box = document.getElementById("msgs");
 
-    for (let m of msgs) {
-        if (m.t <= last) continue;
-        last = m.t;
+    const div = document.createElement("div");
+    div.className = "msg " + (m.user === user ? "me" : "");
 
-        const div = document.createElement("div");
-        div.className = "msg " + (m.user === user ? "me" : "");
+    div.innerText = m.user + ": " + m.text;
 
-        div.innerText = m.user + ": " + m.text;
-
-        box.appendChild(div);
-    }
-
+    box.appendChild(div);
     box.scrollTop = box.scrollHeight;
 }
 
 function send() {
     const text = document.getElementById("text").value;
 
-    fetch("/msg", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ user, text })
-    });
+    ws.send(JSON.stringify({
+        type: "msg",
+        user,
+        text
+    }));
 
     document.getElementById("text").value = "";
 }
