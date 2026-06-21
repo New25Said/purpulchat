@@ -6,196 +6,148 @@
 
 <style>
 body {
-  margin: 0;
-  font-family: system-ui;
-  background: #0f0015;
-  color: white;
+    margin: 0;
+    font-family: system-ui;
+    background: #0e0014;
+    color: white;
 }
 
-/* LOGIN */
 #login {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background: #0f0015;
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 input {
-  margin: 6px;
-  padding: 10px;
-  border-radius: 10px;
-  border: none;
-  width: 220px;
+    margin: 5px;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
 }
 
 button {
-  padding: 10px 18px;
-  border-radius: 10px;
-  border: none;
-  background: #8a2be2;
-  color: white;
-  cursor: pointer;
+    padding: 10px;
+    border-radius: 10px;
+    background: #7a2cff;
+    color: white;
+    border: none;
 }
 
-/* CHAT */
 #chat {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
+    display: none;
+    height: 100vh;
+    flex-direction: column;
 }
 
 #msgs {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px;
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
 }
 
 .msg {
-  max-width: 70%;
-  margin: 6px;
-  padding: 10px;
-  border-radius: 12px;
-  background: #2a0033;
+    background: #2a0033;
+    margin: 6px;
+    padding: 10px;
+    border-radius: 10px;
 }
 
 .me {
-  margin-left: auto;
-  background: #7a2cff;
+    background: #7a2cff;
+    margin-left: auto;
+    max-width: 70%;
 }
 
 .bar {
-  display: flex;
-  padding: 10px;
-  background: #120018;
+    display: flex;
+    padding: 10px;
 }
 
 .bar input {
-  flex: 1;
+    flex: 1;
 }
 </style>
 
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="login">
-  <h2>🍇 Purpul Chat</h2>
-  <input id="id" placeholder="@user único">
-  <input id="nick" placeholder="nickname">
-  <button onclick="enter()">Entrar</button>
+    <h2>🍇 Purpul Chat</h2>
+    <input id="user" placeholder="@user">
+    <button onclick="enter()">Entrar</button>
 </div>
 
-<!-- CHAT -->
-<div id="chat" style="display:none">
+<div id="chat">
+    <div id="msgs"></div>
 
-  <div id="msgs"></div>
-
-  <div class="bar">
-    <input id="text" placeholder="mensaje...">
-    <button onclick="send()">➤</button>
-  </div>
-
+    <div class="bar">
+        <input id="text">
+        <button onclick="send()">➤</button>
+    </div>
 </div>
 
 <script>
 let user = localStorage.getItem("u");
-let last = 0;
-let cacheUsers = {};
 
-/* INIT */
 if (user) start();
 
-async function enter() {
-  user = document.getElementById("id").value;
+function enter() {
+    user = document.getElementById("user").value;
+    localStorage.setItem("u", user);
 
-  const nickname = document.getElementById("nick").value;
+    fetch("/user", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ id: user })
+    });
 
-  await fetch("/user", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({
-      id: user,
-      nickname,
-      photo: ""
-    })
-  });
-
-  localStorage.setItem("u", user);
-
-  start();
+    start();
 }
 
 function start() {
-  document.getElementById("login").style.display = "none";
-  document.getElementById("chat").style.display = "flex";
+    document.getElementById("login").style.display = "none";
+    document.getElementById("chat").style.display = "flex";
 
-  load();
-  setInterval(load, 1200);
+    load();
+    setInterval(load, 1200);
 }
 
-/* OPTIMIZADO: batch users */
-async function getUsers(ids) {
-  const missing = ids.filter(id => !cacheUsers[id]);
+let last = 0;
 
-  if (missing.length) {
-    const res = await fetch("/usersBatch", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ ids: missing })
+async function load() {
+    const res = await fetch("/msgs");
+    const msgs = await res.json();
+
+    const box = document.getElementById("msgs");
+
+    for (let m of msgs) {
+        if (m.t <= last) continue;
+        last = m.t;
+
+        const div = document.createElement("div");
+        div.className = "msg " + (m.user === user ? "me" : "");
+
+        div.innerText = m.user + ": " + m.text;
+
+        box.appendChild(div);
+    }
+
+    box.scrollTop = box.scrollHeight;
+}
+
+function send() {
+    const text = document.getElementById("text").value;
+
+    fetch("/msg", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ user, text })
     });
 
-    const data = await res.json();
-
-    cacheUsers = { ...cacheUsers, ...data };
-  }
-
-  return cacheUsers;
-}
-
-/* LOAD MESSAGES */
-async function load() {
-  const res = await fetch("/msgs");
-  const msgs = await res.json();
-
-  const box = document.getElementById("msgs");
-
-  const ids = [...new Set(msgs.map(m => m.user))];
-  await getUsers(ids);
-
-  for (let m of msgs) {
-    if (m.t <= last) continue;
-    last = m.t;
-
-    const u = cacheUsers[m.user];
-
-    const div = document.createElement("div");
-    div.className = "msg " + (m.user === user ? "me" : "");
-
-    div.innerHTML = `
-      <b>${u?.nickname || m.user}</b><br>
-      ${m.text}
-    `;
-
-    box.appendChild(div);
-  }
-
-  box.scrollTop = box.scrollHeight;
-}
-
-/* SEND */
-async function send() {
-  const text = document.getElementById("text").value;
-
-  await fetch("/msg", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({ user, text })
-  });
-
-  document.getElementById("text").value = "";
+    document.getElementById("text").value = "";
 }
 </script>
 
