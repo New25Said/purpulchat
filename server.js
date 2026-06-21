@@ -35,55 +35,56 @@ app.post("/user", (req, res) => {
     res.json({ ok: true });
 });
 
-/* WS */
+/* WS STATE */
 const online = new Map(); // user -> ws
 
-function sendUsers() {
+function broadcastUsers() {
     const list = [...online.keys()];
+    const payload = JSON.stringify({ type: "users", users: list });
 
-    const payload = JSON.stringify({
-        type: "users",
-        users: list
+    online.forEach(ws => {
+        if (ws.readyState === 1) ws.send(payload);
     });
-
-    online.forEach(ws => ws.send(payload));
 }
 
 wss.on("connection", (ws) => {
 
-    let currentUser = null;
+    let user = null;
 
     ws.on("message", (raw) => {
         const msg = JSON.parse(raw);
 
-        /* LOGIN WS */
+        /* LOGIN */
         if (msg.type === "join") {
-            currentUser = msg.user;
-            online.set(currentUser, ws);
-            sendUsers();
+            user = msg.user;
+            online.set(user, ws);
+            broadcastUsers();
             return;
         }
 
-        /* GLOBAL */
+        /* GLOBAL MESSAGE */
         if (msg.type === "global") {
-            const data = {
-                type: "global",
+            const db = loadDB();
+
+            const m = {
                 user: msg.user,
                 text: msg.text,
                 t: Date.now()
             };
 
+            db.messages.push(m);
+            if (db.messages.length > 300) db.messages = db.messages.slice(-300);
+            saveDB(db);
+
             online.forEach(c => {
                 if (c.readyState === 1) {
-                    c.send(JSON.stringify(data));
+                    c.send(JSON.stringify({ type: "global", data: m }));
                 }
             });
         }
 
-        /* PRIVATE */
+        /* PRIVATE MESSAGE */
         if (msg.type === "private") {
-            const target = online.get(msg.to);
-
             const payload = {
                 type: "private",
                 from: msg.user,
@@ -92,25 +93,27 @@ wss.on("connection", (ws) => {
                 t: Date.now()
             };
 
+            const target = online.get(msg.to);
+
             if (target) target.send(JSON.stringify(payload));
             ws.send(JSON.stringify(payload));
         }
     });
 
     ws.on("close", () => {
-        if (currentUser) {
-            online.delete(currentUser);
-            sendUsers();
+        if (user) {
+            online.delete(user);
+            broadcastUsers();
         }
     });
 });
 
-/* HISTORY GLOBAL (opcional simple) */
+/* HISTORY */
 app.get("/msgs", (req, res) => {
     const db = loadDB();
     res.json(db.messages);
 });
 
-server.listen(process.env.PORT || 3000, () => {
-    console.log("🍇 Purpul Chat FIXED RUNNING");
+server.listen(3000, () => {
+    console.log("🍇 Purpul Chat FIXED CORE RUNNING");
 });
