@@ -2,27 +2,40 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Purpul Chat</title>
+<title>Purpul Chat 🍇</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="center">
+<!-- ================= LOGIN OVERLAY ================= -->
+<div id="login" class="login">
 
-<h1>🍇 Purpul Chat</h1>
+    <h1>🍇 Purpul Chat</h1>
 
-<input id="user" placeholder="@user (único)">
-<input id="nickname" placeholder="nickname">
+    <p>crea tu usuario una vez y nunca más</p>
 
-<input type="file" id="photo">
+    <input id="user" placeholder="@user único">
+    <input id="nickname" placeholder="nickname">
 
-<button onclick="createAccount()">Crear cuenta</button>
+    <input type="file" id="photo">
 
-<p id="status"></p>
+    <button onclick="register()">Entrar al chat</button>
 
 </div>
 
-<script src="auth.js"></script>
+<!-- ================= CHAT ================= -->
+<div id="chat" class="chat hidden">
+
+    <div id="messages"></div>
+
+    <div class="inputBox">
+        <input id="msg" placeholder="escribe algo...">
+        <button onclick="send()">➤</button>
+    </div>
+
+</div>
+
+<script src="app.js"></script>
 
 </body>
 </html>
