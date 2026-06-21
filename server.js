@@ -1,7 +1,7 @@
 const express = require("express");
+const fs = require("fs");
 const http = require("http");
 const { WebSocketServer } = require("ws");
-const fs = require("fs");
 
 const app = express();
 const server = http.createServer(app);
@@ -23,92 +23,62 @@ function saveDB(db) {
 /* ================= USERS ================= */
 app.post("/user", (req, res) => {
     const db = loadDB();
+
     const { id } = req.body;
 
     if (!db.users[id]) {
-        db.users[id] = { createdAt: Date.now() };
+        db.users[id] = {
+            createdAt: Date.now()
+        };
         saveDB(db);
     }
 
     res.json({ ok: true });
 });
 
-/* ================= WS STATE ================= */
-const onlineUsers = new Map(); // user -> ws
-
-function broadcastUsers() {
-    const list = [...onlineUsers.keys()];
-
-    const payload = JSON.stringify({
-        type: "users",
-        users: list
-    });
-
-    onlineUsers.forEach(ws => {
-        if (ws.readyState === 1) ws.send(payload);
-    });
-}
-
-/* ================= WS ================= */
+/* ================= WEBSOCKET ================= */
 wss.on("connection", (ws) => {
 
-    let currentUser = null;
+    ws.on("message", (data) => {
+        const msg = JSON.parse(data);
 
-    ws.on("message", (raw) => {
-        const msg = JSON.parse(raw);
+        if (msg.type === "msg") {
+            const db = loadDB();
 
-        /* LOGIN WS */
-        if (msg.type === "join") {
-            currentUser = msg.user;
-            onlineUsers.set(currentUser, ws);
-            broadcastUsers();
-            return;
-        }
-
-        /* GLOBAL MESSAGE */
-        if (msg.type === "global") {
-            const data = {
-                type: "global",
+            const message = {
                 user: msg.user,
                 text: msg.text,
                 t: Date.now()
             };
 
-            onlineUsers.forEach(client => {
+            db.messages.push(message);
+
+            if (db.messages.length > 200) {
+                db.messages = db.messages.slice(-200);
+            }
+
+            saveDB(db);
+
+            // broadcast a todos
+            wss.clients.forEach(client => {
                 if (client.readyState === 1) {
-                    client.send(JSON.stringify(data));
+                    client.send(JSON.stringify({
+                        type: "msg",
+                        data: message
+                    }));
                 }
             });
         }
-
-        /* PRIVATE MESSAGE */
-        if (msg.type === "private") {
-            const target = onlineUsers.get(msg.to);
-
-            const payload = {
-                type: "private",
-                from: msg.user,
-                to: msg.to,
-                text: msg.text,
-                t: Date.now()
-            };
-
-            if (target && target.readyState === 1) {
-                target.send(JSON.stringify(payload));
-            }
-
-            ws.send(JSON.stringify(payload));
-        }
     });
 
-    ws.on("close", () => {
-        if (currentUser) {
-            onlineUsers.delete(currentUser);
-            broadcastUsers();
-        }
-    });
+});
+
+/* ================= LOAD MESSAGES ================= */
+app.get("/msgs", (req, res) => {
+    const db = loadDB();
+    res.json(db.messages);
 });
 
 server.listen(process.env.PORT || 3000, () => {
-    console.log("🍇 Purpul Chat PRIVATE PRO RUNNING");
+    console.log("🍇 Purpul Chat PRO WS RUNNING");
 });
