@@ -1,94 +1,45 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Purpul Chat</title>
-<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div id="authScreen">
+<h1>🍇 Purpul Chat</h1>
 
-    <div class="card">
-        <h1>🍇 Purpul Chat</h1>
+<button id="btn">
+Crear documento de prueba
+</button>
 
-        <div class="tabs">
-            <button onclick="showRegister()">Registro</button>
-            <button onclick="showLogin()">Login</button>
-        </div>
+<pre id="result"></pre>
 
-        <div id="registerBox">
+<script>
 
-            <input id="regNickname" placeholder="Nickname">
+document
+.getElementById("btn")
+.onclick = async () => {
 
-            <input id="regUser" placeholder="@usuario">
+    const r =
+        await fetch("/test", {
+            method: "POST"
+        });
 
-            <input id="regPassword" type="password" placeholder="Contraseña">
+    const data =
+        await r.json();
 
-            <input id="regPhoto" type="file" accept="image/*">
+    document
+    .getElementById("result")
+    .textContent =
+        JSON.stringify(
+            data,
+            null,
+            2
+        );
 
-            <button onclick="register()">
-                Crear cuenta
-            </button>
+};
 
-        </div>
-
-        <div id="loginBox" style="display:none;">
-
-            <input id="loginUser" placeholder="@usuario">
-
-            <input id="loginPassword" type="password" placeholder="Contraseña">
-
-            <button onclick="login()">
-                Entrar
-            </button>
-
-        </div>
-
-    </div>
-
-</div>
-
-<div id="chatScreen" style="display:none;">
-
-    <div id="topBar">
-
-        <div id="profileInfo">
-
-            <img id="profilePhoto">
-
-            <div>
-
-                <div id="profileNickname"></div>
-
-                <div id="profileUser"></div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <div id="messages"></div>
-
-    <div id="bottomBar">
-
-        <input
-            id="messageInput"
-            placeholder="Escribe un mensaje..."
-        >
-
-        <button onclick="sendMessage()">
-            Enviar
-        </button>
-
-    </div>
-
-</div>
-
-<script src="/socket.io/socket.io.js"></script>
-<script src="app.js"></script>
+</script>
 
 </body>
 </html>
