@@ -1,36 +1,47 @@
 body {
     margin: 0;
     font-family: Arial;
-    background: #1a001f;
+    background: #120016;
     color: white;
 }
 
-.center {
-    text-align: center;
-    margin-top: 100px;
+/* LOGIN */
+.login {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: #120016;
 }
 
 input {
-    display: block;
-    margin: 10px auto;
+    margin: 8px;
     padding: 10px;
     border-radius: 10px;
     border: none;
+    width: 200px;
 }
 
 button {
     padding: 10px 20px;
-    border-radius: 10px;
     border: none;
     background: #7a2cff;
     color: white;
+    border-radius: 10px;
     cursor: pointer;
 }
 
+/* CHAT */
 .chat {
     height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+.hidden {
+    display: none;
 }
 
 #messages {
@@ -40,25 +51,16 @@ button {
 }
 
 .msg {
-    display: flex;
-    gap: 10px;
-    margin: 10px;
     background: #2a0033;
+    margin: 8px;
     padding: 10px;
     border-radius: 10px;
-}
-
-.msg img {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #444;
 }
 
 .inputBox {
     display: flex;
     padding: 10px;
-    background: #120015;
+    background: #0d0010;
 }
 
 .inputBox input {
