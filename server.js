@@ -7,69 +7,65 @@ app.use(express.json({ limit: "5mb" }));
 app.use(express.static("public"));
 
 const serviceAccount = JSON.parse(
-    process.env.FIREBASE_SERVICE_ACCOUNT
+  process.env.FIREBASE_SERVICE_ACCOUNT
 );
 
 admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
+  credential: admin.credential.cert(serviceAccount)
 });
 
 const db = admin.firestore();
 
-/* ================= USERS ================= */
-app.post("/createUser", async (req, res) => {
-    try {
-        const { user, nickname, photo } = req.body;
+/* USERS */
+app.post("/user", async (req, res) => {
+  const { id, nickname, photo } = req.body;
 
-        await db.collection("users").doc(user).set({
-            nickname,
-            photo,
-            createdAt: Date.now()
-        });
+  await db.collection("users").doc(id).set({
+    nickname,
+    photo,
+    updatedAt: Date.now()
+  }, { merge: true });
 
-        res.json({ success: true });
-    } catch (e) {
-        res.json({ success: false, error: e.message });
-    }
+  res.json({ ok: true });
 });
 
-/* ================= MESSAGES ================= */
-app.post("/sendMessage", async (req, res) => {
-    try {
-        const { user, text } = req.body;
+/* MESSAGE */
+app.post("/msg", async (req, res) => {
+  const { user, text } = req.body;
 
-        await db.collection("messages").add({
-            user,
-            text,
-            timestamp: Date.now()
-        });
+  await db.collection("messages").add({
+    user,
+    text,
+    t: Date.now()
+  });
 
-        res.json({ success: true });
-    } catch (e) {
-        res.json({ success: false });
-    }
+  res.json({ ok: true });
 });
 
-app.get("/messages", async (req, res) => {
-    try {
-        const snap = await db.collection("messages")
-            .orderBy("timestamp")
-            .limit(50)
-            .get();
+/* GET MESSAGES */
+app.get("/msgs", async (req, res) => {
+  const snap = await db.collection("messages")
+    .orderBy("t")
+    .limit(60)
+    .get();
 
-        res.json(snap.docs.map(d => d.data()));
-    } catch {
-        res.json([]);
-    }
+  res.json(snap.docs.map(d => d.data()));
 });
 
-app.get("/user/:id", async (req, res) => {
-    const doc = await db.collection("users").doc(req.params.id).get();
-    res.json(doc.exists ? doc.data() : null);
+/* USER BATCH (MUCHO MÁS RÁPIDO) */
+app.post("/usersBatch", async (req, res) => {
+  const { ids } = req.body;
+
+  const results = {};
+
+  await Promise.all(ids.map(async (id) => {
+    const doc = await db.collection("users").doc(id).get();
+    results[id] = doc.exists ? doc.data() : null;
+  }));
+
+  res.json(results);
 });
 
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-    console.log("🍇 Purpul Chat listo");
-});
+app.listen(process.env.PORT || 3000, () =>
+  console.log("🍇 Purpul Chat PRO RUNNING")
+);
