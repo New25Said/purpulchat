@@ -1,7 +1,12 @@
 const express = require("express");
 const fs = require("fs");
+const http = require("http");
+const { WebSocketServer } = require("ws");
 
 const app = express();
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
+
 app.use(express.json());
 app.use(express.static("public"));
 
@@ -25,40 +30,55 @@ app.post("/user", (req, res) => {
         db.users[id] = {
             createdAt: Date.now()
         };
+        saveDB(db);
     }
 
-    saveDB(db);
     res.json({ ok: true });
 });
 
-/* ================= MESSAGE ================= */
-app.post("/msg", (req, res) => {
-    const db = loadDB();
+/* ================= WEBSOCKET ================= */
+wss.on("connection", (ws) => {
 
-    db.messages.push({
-        user: req.body.user,
-        text: req.body.text,
-        t: Date.now()
+    ws.on("message", (data) => {
+        const msg = JSON.parse(data);
+
+        if (msg.type === "msg") {
+            const db = loadDB();
+
+            const message = {
+                user: msg.user,
+                text: msg.text,
+                t: Date.now()
+            };
+
+            db.messages.push(message);
+
+            if (db.messages.length > 200) {
+                db.messages = db.messages.slice(-200);
+            }
+
+            saveDB(db);
+
+            // broadcast a todos
+            wss.clients.forEach(client => {
+                if (client.readyState === 1) {
+                    client.send(JSON.stringify({
+                        type: "msg",
+                        data: message
+                    }));
+                }
+            });
+        }
     });
 
-    // limitar memoria (IMPORTANTE PARA LAG)
-    if (db.messages.length > 200) {
-        db.messages = db.messages.slice(-200);
-    }
-
-    saveDB(db);
-
-    res.json({ ok: true });
 });
 
-/* ================= GET MESSAGES ================= */
+/* ================= LOAD MESSAGES ================= */
 app.get("/msgs", (req, res) => {
     const db = loadDB();
     res.json(db.messages);
 });
 
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-    console.log("🍇 Purpul Chat NO FIREBASE RUNNING");
+server.listen(process.env.PORT || 3000, () => {
+    console.log("🍇 Purpul Chat PRO WS RUNNING");
 });
